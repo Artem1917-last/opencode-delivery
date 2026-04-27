@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  opencode:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: opencode-server
+    restart: unless-stopped
+    ports:
+      - "4096:4096"
+    volumes:
+      - opencode_data:/home/opencode/.local/share/opencode
+      - opencode_state:/home/opencode/.local/state/opencode
+      - opencode_config:/home/opencode/.config/opencode
+      - ./documentation:/home/opencode/documentation:ro
+    environment:
+      - TZ=${TZ:-Europe/Moscow}
+      - OPENCODE_SERVER_USERNAME=${OPENCODE_SERVER_USERNAME}
+      - OPENCODE_SERVER_PASSWORD=${OPENCODE_SERVER_PASSWORD}
+      - AI_PROVIDER=${AI_PROVIDER:-antigravity}
+    networks:
+      - opencode_network
+
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: npm
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "81:81"
+    volumes:
+      - npm_data:/data
+      - npm_letsencrypt:/etc/letsencrypt
+    environment:
+      - TZ=${TZ:-Europe/Moscow}
+    networks:
+      - opencode_network
+    depends_on:
+      - opencode
+
+volumes:
+  opencode_data:
+    driver: local
+  opencode_state:
+    driver: local
+  opencode_config:
+    driver: local
+  npm_data:
+    driver: local
+  npm_letsencrypt:
+    driver: local
+
+networks:
+  opencode_network:
+    driver: bridge

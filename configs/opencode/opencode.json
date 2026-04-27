@@ -1,0 +1,131 @@
+{
+  "$schema": "https://raw.githubusercontent.com/opencode-ai/opencode/main/docs/assets/opencode.schema.json",
+  "version": "1.0.0",
+
+  "agents": {
+    "path": ".opencode/agents",
+    "load": [
+      {
+        "path": "configs/agents",
+        "pattern": "**/*.md"
+      }
+    ]
+  },
+
+  "skills": {
+    "path": ".opencode/skills",
+    "load": [
+      {
+        "path": "configs/skills",
+        "pattern": "**/*.md"
+      }
+    ],
+    "autoUpdate": true
+  },
+
+  "mcp": {
+    "servers": [
+      {
+        "name": "filesystem",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/home/opencode"]
+      },
+      {
+        "name": "github",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github"]
+      },
+      {
+        "name": "playwright",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-playwright"]
+      },
+      {
+        "name": "mcp-finder",
+        "command": "npx",
+        "args": ["-y", "mcp-finder"]
+      },
+      {
+        "name": "mcp-discovery",
+        "command": "npx",
+        "args": ["-y", "mcp-server-discovery"]
+      },
+      {
+        "name": "mcp-compass",
+        "command": "npx",
+        "args": ["-y", "mcp-compass"]
+      },
+      {
+        "name": "google-workspace",
+        "command": "python3",
+        "args": ["-m", "google_workspace_mcp"]
+      },
+      {
+        "name": "telegram",
+        "command": "python3",
+        "args": ["-m", "telegram_mcp"]
+      },
+      {
+        "name": "local-rag",
+        "command": "npx",
+        "args": ["-y", "mcp-local-rag", "--path", "/home/opencode/rag-data"]
+      },
+      {
+        "name": "code-sandbox",
+        "command": "npx",
+        "args": ["-y", "node-code-sandbox-mcp"]
+      }
+    ]
+  },
+
+  "plugins": {
+    "registry": "npm",
+    "list": [
+      "@opencode/agent-memory",
+      "@plannotator/opencode",
+      "@openspoon/subtask2",
+      "@opencode/antigravity-auth",
+      "@opencode/gemini-auth"
+    ]
+  },
+
+  "auth": {
+    "provider": "${AI_PROVIDER:-antigravity}",
+    "antigravity": {
+      "enabled": true
+    },
+    "gemini": {
+      "enabled": true,
+      "apiKey": "${GEMINI_API_KEY}"
+    },
+    "custom": {
+      "endpoint": "${CUSTOM_API_ENDPOINT}",
+      "apiKey": "${CUSTOM_API_KEY}"
+    }
+  },
+
+  "server": {
+    "host": "0.0.0.0",
+    "port": 4096,
+    "auth": {
+      "username": "${OPENCODE_SERVER_USERNAME}",
+      "password": "${OPENCODE_SERVER_PASSWORD}"
+    }
+  },
+
+  "memory": {
+    "enabled": true,
+    "storage": ".opencode/memory"
+  },
+
+  "git": {
+    "autoCommit": true,
+    "autoPush": false,
+    "remote": "origin"
+  },
+
+  "limits": {
+    "contextTokens": 100000,
+    "sessionDuration": "7d"
+  }
+}
