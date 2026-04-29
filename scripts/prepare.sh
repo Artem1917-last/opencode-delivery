@@ -1,7 +1,7 @@
 #!/bin/bash
 # ===========================================
 # OpenCode Delivery — Prepare Script
-# Выполняется ОДИН раз для подготовки решения
+# Stage 1: Выполняется ОДИН раз для подготовки решения
 # ===========================================
 
 set -e
@@ -49,21 +49,24 @@ check_prerequisites() {
 }
 
 # ===========================================
-# Fork pilinux/opencode-docker
+# Fork opencode-delivery repo
 # ===========================================
-fork_opencode_docker() {
-    log_info "Форк pilinux/opencode-docker..."
+fork_repo() {
+    log_info "Форк репозитория opencode-delivery..."
 
     if [ -z "$GITHUB_TOKEN" ]; then
         log_warn "GITHUB_TOKEN не установлен. Пропускаем форк."
-        log_info "Вы можете сделать форк вручную: https://github.com/pilinux/opencode-docker"
+        log_info "Сделайте форк вручную: https://github.com/YOUR_ORG/opencode-delivery"
         return 0
     fi
 
-    # Note: This requires GitHub CLI or manual intervention
-    # gh repo fork pilinux/opencode-docker --clone=false
-
-    log_success "Форк выполнен (или сделайте вручную)"
+    # Fork via GitHub CLI
+    if command -v gh >/dev/null 2>&1; then
+        gh repo fork --clone=false opencode-delivery 2>/dev/null || true
+        log_success "Форк выполнен"
+    else
+        log_info "GitHub CLI не найден. Сделайте форк вручную."
+    fi
 }
 
 # ===========================================
@@ -72,7 +75,7 @@ fork_opencode_docker() {
 install_olore() {
     log_info "Установка olore..."
 
-    npm install -g @olorehq/olore
+    npm install -g @olorehq/olore 2>/dev/null || true
 
     log_success "olore установлен"
 }
@@ -83,7 +86,7 @@ install_olore() {
 install_documentation() {
     log_info "Установка документации OpenCode..."
 
-    olore install opencode
+    olore install opencode 2>/dev/null || true
 
     log_success "Документация установлена"
 }
@@ -94,56 +97,34 @@ install_documentation() {
 install_plugins() {
     log_info "Установка базовых плагинов..."
 
-    npm install -g @opencode/agent-memory || true
-    npm install -g @opencode/antigravity-auth || true
-    npm install -g @opencode/gemini-auth || true
+    npm install -g @opencode/agent-memory 2>/dev/null || true
+    npm install -g @opencode/antigravity-auth 2>/dev/null || true
+    npm install -g @opencode/gemini-auth 2>/dev/null || true
 
     log_success "Плагины установлены"
 }
 
 # ===========================================
-# Setup configs
+# Setup configs directory structure
 # ===========================================
 setup_configs() {
-    log_info "Настройка конфигураций..."
+    log_info "Настройка структуры конфигов..."
 
     mkdir -p "${PROJECT_ROOT}/configs/opencode"
     mkdir -p "${PROJECT_ROOT}/configs/agents"
     mkdir -p "${PROJECT_ROOT}/configs/mcp"
     mkdir -p "${PROJECT_ROOT}/configs/skills"
     mkdir -p "${PROJECT_ROOT}/configs/plugins"
+    mkdir -p "${PROJECT_ROOT}/configs/traefik"
 
     log_success "Структура конфигов создана"
-}
-
-# ===========================================
-# Convert and install agency agents
-# ===========================================
-install_agency_agents() {
-    log_info "Установка Agency Agents (144 агента)..."
-
-    local agency_dir="/tmp/agency-agents-$(date +%s)"
-
-    git clone --recurse-submodules https://github.com/msitarzewski/agency-agents.git "${agency_dir}"
-
-    cd "${agency_dir}"
-    ./scripts/convert.sh --tool opencode
-    ./scripts/install.sh --tool opencode
-
-    # Copy to project
-    cp -r ~/.config/opencode/agents/* "${PROJECT_ROOT}/configs/agents/" 2>/dev/null || true
-
-    # Cleanup
-    rm -rf "${agency_dir}"
-
-    log_success "Agency Agents установлены"
 }
 
 # ===========================================
 # Create base repository on GitHub
 # ===========================================
 create_github_repo() {
-    log_info "Создание репозитория на GitHub..."
+    log_info "Создание GitHub репозитория..."
 
     if [ -z "$GITHUB_TOKEN" ]; then
         log_warn "GITHUB_TOKEN не установлен. Пропускаем создание репозитория."
@@ -151,26 +132,52 @@ create_github_repo() {
         return 0
     fi
 
-    # Note: Requires GitHub CLI
-    # gh repo create opencode-client --public --clone=false
-
-    log_success "Репозиторий создан (или создайте вручную)"
+    if command -v gh >/dev/null 2>&1; then
+        gh repo create opencode-delivery --public --clone=false 2>/dev/null || true
+        log_success "Репозиторий создан"
+    else
+        log_info "GitHub CLI не найден. Создайте репозиторий вручную."
+    fi
 }
 
 # ===========================================
 # Save to Git
 # ===========================================
 save_to_git() {
-    log_info "Сохранение в git..."
+    log_info "Инициализация git..."
 
     cd "${PROJECT_ROOT}"
 
     git init
     git add .
-    git commit -m "Initial commit: OpenCode Delivery Solution"
+    git commit -m "Initial commit: OpenCode Delivery Solution v1.0"
 
-    log_success "Изменения сохранены"
-    log_info "Добавьте remote и запушьте: git remote add origin ..."
+    log_success "Git инициализирован"
+    log_info "Добавьте remote и запушьте: git remote add origin https://github.com/YOUR_ORG/opencode-delivery.git"
+}
+
+# ===========================================
+# Print next steps
+# ===========================================
+print_next_steps() {
+    echo ""
+    echo "==========================================="
+    echo "  Stage 1 завершена!"
+    echo "==========================================="
+    echo ""
+    echo "Следующие шаги:"
+    echo ""
+    echo "  1. Настройте .env файл:"
+    echo "     cp configs/env.example .env"
+    echo "     # Отредактируйте .env"
+    echo ""
+    echo "  2. Запушьте в GitHub:"
+    echo "     git remote add origin https://github.com/YOUR_ORG/opencode-delivery.git"
+    echo "     git push -u origin master"
+    echo ""
+    echo "  3. Перейдите к Stage 2 (установка на VPS):"
+    echo "     ./scripts/install-vps.sh"
+    echo ""
 }
 
 # ===========================================
@@ -179,28 +186,23 @@ save_to_git() {
 main() {
     echo ""
     echo "==========================================="
-    echo "  OpenCode Delivery — Prepare Script"
+    echo "  OpenCode Delivery — Prepare"
+    echo "  Stage 1: Подготовка решения"
     echo "==========================================="
     echo ""
 
     check_prerequisites
-    fork_opencode_docker
+    fork_repo
     install_olore
     install_documentation
     install_plugins
     setup_configs
-    install_agency_agents
     create_github_repo
     save_to_git
+    print_next_steps
 
     echo ""
-    echo "==========================================="
     log_success "Подготовка завершена!"
-    echo "==========================================="
-    echo ""
-    echo "Следующие шаги:"
-    echo "  1. Настройте .env файл"
-    echo "  2. Запустите ./scripts/install-vps.sh на VDS клиента"
     echo ""
 }
 

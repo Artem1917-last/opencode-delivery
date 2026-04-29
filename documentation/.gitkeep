@@ -1,0 +1,4 @@
+# Client Documentation
+
+This directory should contain HTML/PDF documentation for the client.
+Run `./scripts/prepare.sh` to generate documentation from the source.

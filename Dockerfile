@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM pilinux/opencode-docker:latest
+FROM ubuntu:24.04
 
 # ===========================================
 # Labels
@@ -81,6 +81,15 @@ RUN mkdir -p /home/${USER}/.config/opencode/agents \
 RUN chown -R ${USER}:${GROUP} /home/${USER}
 
 # ===========================================
+# Install OpenCode
+# ===========================================
+RUN curl -fsSL https://opencode.ai/api/download/linux -o /tmp/opencode.tar.gz \
+    || curl -fsSL https://github.com/opencode-ai/opencode/releases/latest/download/opencode-linux-x64.tar.gz -o /tmp/opencode.tar.gz \
+    && tar -xzf /tmp/opencode.tar.gz -C /opt \
+    && ln -sf /opt/opencode/bin/opencode /usr/local/bin/opencode \
+    && rm /tmp/opencode.tar.gz
+
+# ===========================================
 # Switch to user
 # ===========================================
 USER ${USER}
@@ -92,25 +101,26 @@ RUN olore install opencode || echo "olore install skipped"
 
 # ===========================================
 # Copy agent configurations
-# COPY --chown=${UID}:${GID} configs/agents/ /home/${USER}/.config/opencode/agents/
-# COPY --chown=${UID}:${GID} configs/skills/ /home/${USER}/.config/opencode/skills/
+COPY --chown=${UID}:${GID} configs/agents/ /home/${USER}/.config/opencode/agents/
+COPY --chown=${UID}:${GID} configs/skills/ /home/${USER}/.config/opencode/skills/
 
 # ===========================================
 # Copy MCP server configurations
-# COPY --chown=${UID}:${GID} configs/mcp/ /home/${USER}/.config/opencode/mcp/
+COPY --chown=${UID}:${GID} configs/mcp/ /home/${USER}/.config/opencode/mcp/
 
 # ===========================================
 # Copy documentation
-# COPY --chown=${UID}:${GID} documentation/ /home/${USER}/documentation/
+COPY --chown=${UID}:${GID} documentation/ /home/${USER}/documentation/
 
 # ===========================================
 # Install Agency Agents (144 agents)
 # ===========================================
 WORKDIR /tmp/agency
-RUN git clone --recurse-submodules https://github.com/msitarzewski/agency-agents.git . && \
-    ./scripts/convert.sh --tool opencode && \
-    ./scripts/install.sh --tool opencode && \
-    rm -rf /tmp/agency
+RUN git clone --recurse-submodules https://github.com/msitarzewski/agency-agents.git . \
+    && ./scripts/convert.sh --tool opencode \
+    && ./scripts/install.sh --tool opencode \
+    || { echo "WARNING: agency-agents installation failed, continuing..."; true; } \
+    && rm -rf /tmp/agency
 
 # ===========================================
 # Install MCP servers (global npm packages as fallback)

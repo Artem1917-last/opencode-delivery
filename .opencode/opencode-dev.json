@@ -1,0 +1,28 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "shell": "cmd",
+  "agents": {
+    "load": [
+      {
+        "path": "./configs/agents",
+        "pattern": "**/*.md"
+      }
+    ]
+  },
+  "skills": {
+    "load": [
+      {
+        "path": "./configs/skills",
+        "pattern": "**/*.md"
+      }
+    ]
+  },
+  "permission": {
+    "bash": "ask",
+    "edit": "ask",
+    "webfetch": "ask",
+    "doom_loop": "ask",
+    "mcp": "ask",
+    "skill": "ask"
+  }
+}

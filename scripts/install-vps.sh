@@ -1,7 +1,7 @@
 #!/bin/bash
 # ===========================================
 # OpenCode Delivery — VPS Install Script
-# Устанавливает решение на VDS клиента
+# Stage 2: Устанавливает решение на VDS клиента
 # ===========================================
 
 set -e
@@ -38,6 +38,26 @@ load_env() {
 }
 
 # ===========================================
+# Generate password if not set
+# ===========================================
+generate_password_if_needed() {
+    if [ -z "$OPENCODE_SERVER_PASSWORD" ] || [ "$OPENCODE_SERVER_PASSWORD" = "CHANGE_ME" ]; then
+        log_info "Генерация пароля..."
+        OPENCODE_SERVER_PASSWORD=$(bash "${SCRIPT_DIR}/generate-password.sh")
+        log_success "Пароль сгенерирован: $OPENCODE_SERVER_PASSWORD"
+
+        # Save to .env
+        if [ -f "${PROJECT_ROOT}/.env" ]; then
+            sed -i "s/OPENCODE_SERVER_PASSWORD=.*/OPENCODE_SERVER_PASSWORD=${OPENCODE_SERVER_PASSWORD}/" "${PROJECT_ROOT}/.env"
+        fi
+    fi
+
+    if [ -z "$OPENCODE_SERVER_USERNAME" ]; then
+        OPENCODE_SERVER_USERNAME="admin"
+    fi
+}
+
+# ===========================================
 # Check prerequisites
 # ===========================================
 check_prerequisites() {
@@ -64,10 +84,50 @@ check_prerequisites() {
 }
 
 # ===========================================
-# Pull latest image or build
+# Create directories for Traefik
+# ===========================================
+create_traefik_dirs() {
+    log_info "Создание директорий для Traefik..."
+
+    mkdir -p "${PROJECT_ROOT}/configs/traefik"
+    mkdir -p "${PROJECT_ROOT}/configs/traefik/acme"
+    mkdir -p "${PROJECT_ROOT}/configs/traefik/auth"
+
+    # Create empty ACME file for Traefik
+    touch "${PROJECT_ROOT}/configs/traefik/acme/acme.json"
+    chmod 600 "${PROJECT_ROOT}/configs/traefik/acme/acme.json"
+
+    log_success "Директории созданы"
+}
+
+# ===========================================
+# Generate Basic Auth password file for Traefik
+# ===========================================
+setup_basic_auth() {
+    log_info "Настройка Basic Auth..."
+
+    # Install apache2-utils for htpasswd
+    apt-get update && apt-get install -y apache2-utils 2>/dev/null || true
+
+    local auth_file="${PROJECT_ROOT}/configs/traefik/auth/htpasswd"
+    mkdir -p "$(dirname "$auth_file")"
+
+    # Generate password if needed
+    generate_password_if_needed
+
+    # Create htpasswd file (Traefik uses APR1 format by default)
+    htpasswd -bc "$auth_file" "$OPENCODE_SERVER_USERNAME" "$OPENCODE_SERVER_PASSWORD"
+
+    log_success "Basic Auth настроен"
+    log_info "Логин: $OPENCODE_SERVER_USERNAME"
+    log_info "Пароль: $OPENCODE_SERVER_PASSWORD"
+}
+
+# ===========================================
+# Build images
 # ===========================================
 setup_images() {
-    log_info "Подготовка образов..."
+    log_info "Сборка образов..."
 
     cd "${PROJECT_ROOT}"
 
@@ -91,10 +151,29 @@ create_volumes() {
     docker volume create opencode_data 2>/dev/null || true
     docker volume create opencode_state 2>/dev/null || true
     docker volume create opencode_config 2>/dev/null || true
-    docker volume create npm_data 2>/dev/null || true
-    docker volume create npm_letsencrypt 2>/dev/null || true
 
     log_success "Volumes созданы"
+}
+
+# ===========================================
+# Configure firewall
+# ===========================================
+configure_firewall() {
+    log_info "Настройка firewall..."
+
+    if command -v ufw >/dev/null 2>&1; then
+        ufw allow 80/tcp    # HTTP (Let's Encrypt)
+        ufw allow 443/tcp   # HTTPS
+        ufw allow 31415/tcp # Traefik dashboard
+        ufw allow 22/tcp    # SSH
+        ufw --force enable 2>/dev/null || true
+        log_success "Firewall настроен (порты 80, 443, 31415 открыты)"
+    else
+        log_warn "UFW не найден. Откройте порты вручную:"
+        log_info "  80/tcp — HTTP (Let's Encrypt)"
+        log_info "  443/tcp — HTTPS"
+        log_info "  31415/tcp — Traefik Dashboard"
+    fi
 }
 
 # ===========================================
@@ -114,79 +193,60 @@ start_containers() {
 }
 
 # ===========================================
-# Setup Nginx Proxy Manager
+# Verify setup
 # ===========================================
-setup_nginx_proxy_manager() {
-    log_info "Настройка Nginx Proxy Manager..."
+verify_setup() {
+    log_info "Проверка установки..."
 
-    # Wait for NPM to be ready
-    sleep 5
+    local ip=$(hostname -I | awk '{print $1}')
 
-    # NPM default credentials: admin@example.com / changeme
-    log_info "Откройте http://localhost:81 для настройки NPM"
-    log_info "Логин: admin@example.com"
-    log_info "Пароль: changeme"
-
-    log_success "NPM настроен"
-}
-
-# ===========================================
-# Setup Basic Auth
-# ===========================================
-setup_basic_auth() {
-    log_info "Настройка Basic Auth..."
-
-    # Generate htpasswd
-    apt-get update && apt-get install -y apache2-utils 2>/dev/null || true
-
-    local auth_file="${PROJECT_ROOT}/configs/nginx/.htpasswd"
-    mkdir -p "$(dirname "$auth_file")"
-
-    htpasswd -bc "$auth_file" "$OPENCODE_SERVER_USERNAME" "$OPENCODE_SERVER_PASSWORD"
-
-    log_success "Basic Auth настроен"
-}
-
-# ===========================================
-# Configure firewall
-# ===========================================
-configure_firewall() {
-    log_info "Настройка firewall..."
-
-    if command -v ufw >/dev/null 2>&1; then
-        ufw allow 80/tcp
-        ufw allow 443/tcp
-        ufw allow 22/tcp
-        ufw enable 2>/dev/null || true
+    # Check if containers are running
+    if docker ps | grep -q opencode-server; then
+        log_success "OpenCode контейнер запущен"
+    else
+        log_error "OpenCode контейнер не запущен!"
+        return 1
     fi
 
-    log_success "Firewall настроен"
+    if docker ps | grep -q traefik; then
+        log_success "Traefik контейнер запущен"
+    else
+        log_error "Traefik контейнер не запущен!"
+        return 1
+    fi
+
+    # Check Traefik HTTP challenge port
+    if curl -sf "http://${ip}:80/health" >/dev/null 2>&1; then
+        log_success "HTTP порт (80) работает"
+    fi
 }
 
 # ===========================================
 # Print access info
 # ===========================================
 print_access_info() {
+    local ip=$(hostname -I | awk '{print $1}')
+
     echo ""
     echo "==========================================="
     echo "  OpenCode установлен и запущен!"
     echo "==========================================="
     echo ""
     echo "Доступ к системе:"
-    echo "  URL: http://$(hostname -I | awk '{print $1}'):80"
-    echo "  или: http://YOUR_DOMAIN:80"
+    echo "  URL: https://${ip}:31415"
+    echo "  или: https://YOUR_DOMAIN"
+    echo ""
+    echo "Traefik Dashboard:"
+    echo "  URL: http://${ip}:31415"
     echo ""
     echo "Basic Auth:"
     echo "  Логин: $OPENCODE_SERVER_USERNAME"
-    echo "  Пароль: (тот что вы указали в .env)"
+    echo "  Пароль: $OPENCODE_SERVER_PASSWORD"
     echo ""
-    echo "Nginx Proxy Manager:"
-    echo "  URL: http://localhost:81"
-    echo "  Логин: admin@example.com"
-    echo "  Пароль: changeme"
-    echo ""
-    echo "OpenCode Web Interface:"
-    echo "  URL: http://localhost:4096"
+    echo "Важно:"
+    echo "  - HTTPS работает через Let's Encrypt (автоматически)"
+    echo "  - Для домена: создайте A-запись на ${ip}"
+    echo "  - Пароль хранится в .env файле"
     echo ""
 }
 
@@ -197,21 +257,26 @@ main() {
     echo ""
     echo "==========================================="
     echo "  OpenCode Delivery — VPS Install"
+    echo "  Stage 2: Установка на VDS"
     echo "==========================================="
     echo ""
 
     load_env
+    generate_password_if_needed
     check_prerequisites
+    create_traefik_dirs
+    setup_basic_auth
     setup_images
     create_volumes
-    setup_basic_auth
     start_containers
-    setup_nginx_proxy_manager
     configure_firewall
+    verify_setup
     print_access_info
 
     echo ""
     log_success "Установка завершена!"
+    echo ""
+    echo "Следующий шаг: ./scripts/onboard-client.sh"
     echo ""
 }
 

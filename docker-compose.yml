@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: opencode-server
+    container_name: opencode-app
     restart: unless-stopped
     ports:
       - "4096:4096"
@@ -13,7 +13,7 @@ services:
       - opencode_data:/home/opencode/.local/share/opencode
       - opencode_state:/home/opencode/.local/state/opencode
       - opencode_config:/home/opencode/.config/opencode
-      - ./documentation:/home/opencode/documentation:ro
+      # Note: ./documentation mount removed - directory is empty, dead code
     environment:
       - TZ=${TZ:-Europe/Moscow}
       - OPENCODE_SERVER_USERNAME=${OPENCODE_SERVER_USERNAME}
@@ -21,20 +21,40 @@ services:
       - AI_PROVIDER=${AI_PROVIDER:-antigravity}
     networks:
       - opencode_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4096/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  nginx-proxy-manager:
-    image: jc21/nginx-proxy-manager:latest
-    container_name: npm
+  traefik:
+    image: traefik:v3.2
+    container_name: traefik
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
-      - "81:81"
+      - "80:80"           # HTTP (for Let's Encrypt HTTP-01 challenge)
+      - "443:443"         # HTTPS
+      - "31415:31415"     # Traefik dashboard on non-standard port
     volumes:
-      - npm_data:/data
-      - npm_letsencrypt:/etc/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_acme:/etc/traefik/acme
+      - traefik_auth:/etc/traefik/auth
+      - traefik_certs:/etc/traefik/certs
+      - ./configs/traefik:/etc/traefik/configs:ro
     environment:
-      - TZ=${TZ:-Europe/Moscow}
+      - DOMAIN=${DOMAIN:-localhost}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-admin@example.com}
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.file.directory=/etc/traefik/configs"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--log.level=INFO"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
     networks:
       - opencode_network
     depends_on:
@@ -47,9 +67,11 @@ volumes:
     driver: local
   opencode_config:
     driver: local
-  npm_data:
+  traefik_acme:
     driver: local
-  npm_letsencrypt:
+  traefik_auth:
+    driver: local
+  traefik_certs:
     driver: local
 
 networks:

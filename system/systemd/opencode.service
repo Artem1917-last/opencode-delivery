@@ -1,0 +1,24 @@
+[Unit]
+Description=OpenCode Delivery Service
+After=docker.service network-online.target
+Requires=docker.service network-online.target
+
+[Service]
+Type=simple
+User=devuser
+WorkingDirectory=/home/devuser/opencode-delivery
+# Use docker compose plugin (v2) - installed as part of docker-ce package
+ExecStartPre=-/usr/bin/docker compose -f /home/devuser/opencode-delivery/docker-compose.yml down
+ExecStart=/usr/bin/docker compose -f /home/devuser/opencode-delivery/docker-compose.yml up
+ExecStop=/usr/bin/docker compose -f /home/devuser/opencode-delivery/docker-compose.yml down
+Restart=always
+RestartSec=10
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/home/devuser/opencode-delivery /var/run/docker.sock
+
+[Install]
+WantedBy=multi-user.target

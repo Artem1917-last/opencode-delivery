@@ -1,0 +1,127 @@
+# =============================================================================
+# OpenCode Delivery - Docker Compose
+# =============================================================================
+# Traefik v3 + OpenCode + Rate Limiting + Basic Auth
+# =============================================================================
+
+services:
+  # =============================================================================
+  # Traefik v3 - Reverse Proxy
+  # =============================================================================
+  traefik:
+    image: traefik:v3.2
+    container_name: opencode-traefik
+    restart: unless-stopped
+    profiles:
+      - production
+    ports:
+      - "80:80"       # HTTP (ACME challenge)
+      - "443:443"     # HTTPS (encrypted access)
+      - "31415:31415" # Traefik Dashboard (HTTPS)
+    volumes:
+      # Mount Traefik dynamic configurations
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - ./traefik/tls.yml:/etc/traefik/tls.yml:ro
+      # Let's Encrypt certificates
+      - traefik-certs:/letsencrypt
+      # Docker socket for auto-discovery
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - TZ=UTC
+    labels:
+      # Traefik labels for OpenCode service
+      - "traefik.enable=true"
+      - "traefik.http.routers.opencode.rule=Host(`opencode.local`)"
+      - "traefik.http.routers.opencode.entrypoints=websecure"
+      - "traefik.http.routers.opencode.tls=true"
+      - "traefik.http.routers.opencode.tls.certResolver=letsencrypt"
+      - "traefik.http.routers.opencode.middlewares=auth,rate-limit"
+      - "traefik.http.services.opencode.loadbalancer.server.url=http://opencode-app:4096"
+      # Middleware labels
+      - "traefik.http.middlewares.auth.basicAuth.users=admin:$apr1$h7g9k2j1$f8j3n5m6p9q0r2s4t5u6v7$"
+      - "traefik.http.middlewares.rate-limit.rateLimit.average=10"
+      - "traefik.http.middlewares.rate-limit.rateLimit.burst=50"
+      - "traefik.http.middlewares.rate-limit.rateLimit.period=1s"
+      - "traefik.http.middlewares.rate-limit.ipWhiteList.sourceRange=127.0.0.1/32,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    networks:
+      - opencode-net
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # =============================================================================
+  # OpenCode - AI Coding Agent
+  # =============================================================================
+  opencode:
+    image: ghcr.io/opencode-ai/opencode:latest
+    container_name: opencode-app
+    restart: unless-stopped
+    profiles:
+      - production
+    environment:
+      # OpenCode settings
+      - OPENCODE_SERVER_PORT=4096
+      - OPENCODE_SERVER_USERNAME=${OPENCODE_USERNAME:-devuser}
+      - OPENCODE_SERVER_PASSWORD=${OPENCODE_PASSWORD:-changeme}
+      - TZ=UTC
+      # AI Provider settings (optional)
+      - OPENCODE_AUTH_PROVIDER=${OPENCODE_AUTH_PROVIDER:-}
+      - OPENCODE_AUTH_API_KEY=${OPENCODE_AUTH_API_KEY:-}
+    volumes:
+      # Persistent data
+      - opencode-data:/home/opencode/.local/share/opencode
+      - opencode-state:/home/opencode/.local/state/opencode
+      - opencode-config:/home/opencode/.config/opencode
+      # Agent configurations
+      - ../configs/agents:/home/opencode/.config/opencode/agents:ro
+      # Skills
+      - ../configs/skills:/home/opencode/.config/opencode/skills:ro
+      # MCP servers
+      - ../configs/mcp:/home/opencode/.config/mcp:ro
+      # Plugins
+      - ../configs/plugins:/home/opencode/.opencode/plugins:ro
+    labels:
+      - "traefik.enable=true"
+    networks:
+      - opencode-net
+    depends_on:
+      - traefik
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4096/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  opencode-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.200.0.0/24
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  # Traefik certificates
+  traefik-certs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /letsencrypt
+
+  # OpenCode data volumes
+  opencode-data:
+    driver: local
+  opencode-state:
+    driver: local
+  opencode-config:
+    driver: local

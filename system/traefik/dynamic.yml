@@ -1,0 +1,65 @@
+# Traefik dynamic configuration
+# Basic Auth, routing, TLS settings
+
+# ===========================================
+# HTTP Router (redirect to HTTPS)
+# ===========================================
+http:
+  routers:
+    opencode-http:
+      rule: "Host(`${DOMAIN}`)"
+      entryPoints:
+        - web
+      service: opencode-service
+      middlewares:
+        - rate-limit
+
+    opencode-https:
+      rule: "Host(`${DOMAIN}`)"
+      entryPoints:
+        - websecure
+      service: opencode-service
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - basic-auth
+
+  # ===========================================
+  # Services
+  # ===========================================
+  services:
+    opencode-service:
+      loadBalancer:
+        servers:
+          - url: "http://opencode-app:4096"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 10s
+
+  # ===========================================
+  # Middlewares
+  # ===========================================
+  middlewares:
+    # Basic Auth
+    basic-auth:
+      basicAuth:
+        realm: "OpenCode Access"
+        usersFile: "/etc/traefik/auth/htpasswd"
+
+    # Rate Limiting: 10 req/sec per IP
+    rate-limit:
+      rateLimit:
+        average: 10
+        burst: 50
+        period: 1s
+
+    # Headers for security
+    secure-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          X-Robots-Tag: "noindex, nofollow"

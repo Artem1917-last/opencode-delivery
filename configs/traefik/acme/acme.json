@@ -1,0 +1,15 @@
+{
+  "letsencrypt": {
+    "Account": {
+      "Email": "admin@example.com",
+      "Registration": {
+        "body": {
+          "status": "valid"
+        },
+        "uri": "https://acme-v02.api.letsencrypt.org/acme/acct/placeholder"
+      },
+      "PrivateKey": "",
+      "KeyType": "4096"
+    }
+  }
+}
