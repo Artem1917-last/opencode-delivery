@@ -200,21 +200,22 @@ build {
 
   # ---------------------------------------------------------------------
   # Provisioner 5: Install MCP servers globally via npm
+  # DISABLED FOR TEST BUILD - MCP servers will be added later
   # ---------------------------------------------------------------------
-  provisioner "shell" {
-    execute_command = "sudo sh -c '{{ .Vars }} {{ .Path }}'"
-    inline = [
-      "npm install -g @modelcontextprotocol/server-filesystem",
-      "npm install -g @modelcontextprotocol/server-github",
-      "npm install -g @modelcontextprotocol/server-playwright",
-      "npm install -g ghcr.io/mcpxyz/mcp-finder || echo 'mcp-finder skipped'",
-      "npm install -g ghcr.io/mcpxyz/mcp-discovery || echo 'mcp-discovery skipped'",
-      "npm install -g ghcr.io/mcpxyz/mcp-compass || echo 'mcp-compass skipped'",
-      "npm install -g ghcr.io/mcpxyz/local-rag || echo 'local-rag skipped'",
-      "npm install -g ghcr.io/mcpxyz/code-sandbox || echo 'code-sandbox skipped'",
-      "echo 'MCP servers installed globally'"
-    ]
-  }
+  # provisioner "shell" {
+  #   execute_command = "sudo sh -c '{{ .Vars }} {{ .Path }}'"
+  #   inline = [
+  #     "npm install -g @modelcontextprotocol/server-filesystem",
+  #     "npm install -g @modelcontextprotocol/server-github",
+  #     "npm install -g @modelcontextprotocol/server-playwright",
+  #     "npm install -g ghcr.io/mcpxyz/mcp-finder || echo 'mcp-finder skipped'",
+  #     "npm install -g ghcr.io/mcpxyz/mcp-discovery || echo 'mcp-discovery skipped'",
+  #     "npm install -g ghcr.io/mcpxyz/mcp-compass || echo 'mcp-compass skipped'",
+  #     "npm install -g ghcr.io/mcpxyz/local-rag || echo 'local-rag skipped'",
+  #     "npm install -g ghcr.io/mcpxyz/code-sandbox || echo 'code-sandbox skipped'",
+  #     "echo 'MCP servers installed globally'"
+  #   ]
+  # }
 
   # ---------------------------------------------------------------------
   # Provisioner 6: Copy system configurations (Root-space)
