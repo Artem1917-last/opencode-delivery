@@ -1,0 +1,30 @@
+# Packer
+packer_cache/
+output-*/
+*.qcow2
+*.iso
+manifest.json
+serial.log
+packer-debug.log
+
+# OpenCode local
+.opencode/
+memory/
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temp
+tmp/
+temp/
