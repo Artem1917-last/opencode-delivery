@@ -128,25 +128,13 @@ find /usr -type f -name "*.pyc" -delete 2>/dev/null || true
 find /usr -type f -name "*.pyo" -delete 2>/dev/null || true
 
 # =============================================================================
-# 9. Docker cleanup (preserve pre-warmed images)
+# 9. npm cache cleanup
 # =============================================================================
-echo "Cleaning Docker (preserving pre-warmed images)..."
+echo "Cleaning npm cache..."
 
-if command -v docker &> /dev/null; then
-    # Stop Docker service
-    systemctl stop docker 2>/dev/null || true
-
-    # Remove only build artifacts, containers, and unused images
-    # DO NOT prune volumes - they may contain important data
-    docker container prune -f 2>/dev/null || true
-    docker image prune -f 2>/dev/null || true
-
-    # Clean build cache
-    docker builder prune -f 2>/dev/null || true
-
-    # Remove Docker state files but keep images
-    rm -f /var/lib/docker/*.db 2>/dev/null || true
-    rm -rf /var/lib/docker/network/* 2>/dev/null || true
+if command -v npm &> /dev/null; then
+    npm cache clean --force 2>/dev/null || true
+    rm -rf /home/devuser/.npm/_cacache 2>/dev/null || true
 fi
 
 # =============================================================================

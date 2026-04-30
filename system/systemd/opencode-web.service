@@ -1,0 +1,34 @@
+[Unit]
+Description=OpenCode Web Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=devuser
+Group=devuser
+WorkingDirectory=/home/devuser
+ExecStart=/usr/local/bin/opencode web --port 4096 --hostname 127.0.0.1 --config /home/devuser/.opencode/opencode.json
+Restart=always
+RestartSec=10
+
+# Environment
+Environment=HOME=/home/devuser
+Environment=NODE_ENV=production
+Environment=DOMAIN=localhost
+Environment=OPENCODE_SERVER_USERNAME=admin
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/home/devuser/.opencode /home/devuser/.config
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=opencode-web
+
+[Install]
+WantedBy=multi-user.target

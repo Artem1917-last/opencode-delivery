@@ -3,20 +3,20 @@
   "version": "1.0.0",
 
   "agents": {
-    "path": ".opencode/agents",
+    "path": "/home/devuser/.opencode/agents",
     "load": [
       {
-        "path": "configs/agents",
+        "path": "/home/devuser/configs/agents",
         "pattern": "**/*.md"
       }
     ]
   },
 
   "skills": {
-    "path": ".opencode/skills",
+    "path": "/home/devuser/.opencode/skills",
     "load": [
       {
-        "path": "configs/skills",
+        "path": "/home/devuser/configs/skills",
         "pattern": "**/*.md"
       }
     ],
@@ -105,17 +105,17 @@
   },
 
   "server": {
-    "host": "0.0.0.0",
+    "host": "127.0.0.1",
     "port": 4096,
     "auth": {
-      "username": "${OPENCODE_SERVER_USERNAME}",
+      "username": "${OPENCODE_SERVER_USERNAME:-admin}",
       "password": "${OPENCODE_SERVER_PASSWORD}"
     }
   },
 
   "memory": {
     "enabled": true,
-    "storage": ".opencode/memory"
+    "storage": "/home/devuser/.opencode/memory"
   },
 
   "git": {

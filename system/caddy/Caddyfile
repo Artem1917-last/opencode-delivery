@@ -1,0 +1,84 @@
+# =============================================================================
+# Caddyfile — OpenCode Delivery Reverse Proxy
+# =============================================================================
+# Replaces Traefik v3 with automatic HTTPS, simpler config, single binary
+# =============================================================================
+
+# Global options
+{
+    # ACME email for Let's Encrypt
+    email {$LETSENCRYPT_EMAIL:admin@example.com}
+
+    # Admin API disabled for security (not needed in production)
+    admin off
+
+    # Local Caddy data directory (certs, OCSP staples)
+    storage file_system {
+        root /var/lib/caddy
+    }
+
+    # Log format
+    log {
+        level INFO
+        output file /var/log/caddy/access.log {
+            roll_size 100mb
+            roll_keep 3
+        }
+    }
+}
+
+# =============================================================================
+# HTTP → HTTPS redirect + Let's Encrypt HTTP-01 challenge
+# =============================================================================
+http://{$DOMAIN:localhost} {
+    redir https://{host}{uri} 308
+}
+
+# =============================================================================
+# Main site: HTTPS with Basic Auth → OpenCode
+# =============================================================================
+{$DOMAIN:localhost} {
+    # Reverse proxy to OpenCode server
+    reverse_proxy localhost:4096
+
+    # TLS via Let's Encrypt (automatic)
+    tls {
+        protocols tls1.2 tls1.3
+    }
+
+    # Basic Auth for all routes
+    basicauth /* {
+        {$OPENCODE_SERVER_USERNAME:admin} {$OPENCODE_SERVER_PASSWORD_HASH}
+    }
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # Rate limiting via Caddy's built-in rate_limit (requires caddy-ratelimit plugin)
+    # If using stock Caddy, use fail2ban at OS level instead
+    # @ratelimit rate_limit 10r/s 50burst
+    # respond @ratelimit 429 "Too Many Requests"
+
+    # Logging
+    log {
+        output file /var/log/caddy/opencode-access.log {
+            roll_size 100mb
+            roll_keep 5
+        }
+    }
+}
+
+# =============================================================================
+# Health check endpoint (no auth, for monitoring)
+# =============================================================================
+{$DOMAIN:localhost}/health {
+    reverse_proxy localhost:4096
+    basicauth off
+}
