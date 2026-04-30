@@ -1,45 +1,7 @@
-# OpenCode Delivery — Команды
-
-## Packer сборка
-
-### Валидация шаблона
-```powershell
-.\packer.exe validate packer\template.pkr.hcl
-```
-
-### Запуск сборки (WSL2 + QEMU)
-```powershell
+# Запуск сборки Packer (WSL2 + QEMU)
 wsl -d Debian -- bash -c "cd /mnt/c/Users/Артем/opencode-delivery && PACKER_LOG=1 PACKER_LOG_FILE=packer-debug.log packer build -on-error=ask packer/template.pkr.hcl"
-```
 
-### Отладка сборки
-```powershell
-$env:PACKER_LOG="1"; $env:PACKER_LOG_FILE="packer-debug.log"; .\packer.exe build -on-error=ask packer\template.pkr.hcl
-```
+# Коммит и push (замени MESSAGE на своё)
+git add .; git commit -m "MESSAGE"; git push
 
-## Git
-
-### Инициализация и push
-```powershell
-git remote add origin https://github.com/Artem1917-last/opencode-delivery.git
-git add .
-git commit -m "Initial commit: OpenCode Delivery Solution v1.0"
-git push -u origin master
-```
-
-## WSL2
-
-### Проверка статуса
-```powershell
-wsl -l -v
-```
-
-### Установка QEMU
-```powershell
-wsl -d Debian -- bash -c "echo 'nameserver 8.8.8.8' | sudo tee /etc/resolv.conf && sudo apt-get update && sudo apt-get install -y qemu-system-x86 qemu-utils cloud-image-utils unzip"
-```
-
-### Установка Packer в WSL2
-```powershell
-wsl -d Debian -- bash -c "wget https://releases.hashicorp.com/packer/1.11.2/packer_1.11.2_linux_amd64.zip && unzip packer_1.11.2_linux_amd64.zip && sudo mv packer /usr/local/bin/ && rm packer_1.11.2_linux_amd64.zip"
-```
+# Тест permissions — v3

@@ -127,5 +127,14 @@
   "limits": {
     "contextTokens": 100000,
     "sessionDuration": "7d"
+  },
+
+  "permission": {
+    "bash": "ask",
+    "edit": "ask",
+    "webfetch": "ask",
+    "doom_loop": "ask",
+    "mcp": "ask",
+    "skill": "ask"
   }
 }

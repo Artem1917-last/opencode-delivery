@@ -380,6 +380,30 @@ rateLimit:
 
 ---
 
+## WSL2 DNS Configuration
+
+WSL2 сбрасывает DNS при каждом перезапуске. Для стабильной работы:
+
+### 1. Отключить автогенерацию resolv.conf
+```bash
+# В WSL2 (один раз)
+echo -e '[network]\ngenerateResolvConf = false' | sudo tee /etc/wsl.conf
+echo 'nameserver 8.8.8.8' | sudo tee /etc/resolv.conf
+```
+
+### 2. Перезапустить WSL2
+```powershell
+wsl --shutdown
+wsl -d Debian
+```
+
+### 3. Если resolv.conf пропал после shutdown
+```powershell
+wsl -d Debian -u root -- bash -c "echo 'nameserver 8.8.8.8' > /etc/resolv.conf"
+```
+
+---
+
 ## Next Steps
 
 - [ ] Build Packer image (in progress — debugging QEMU/TCG timeout issues)
