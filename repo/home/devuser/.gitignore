@@ -1,0 +1,9 @@
+# Sensitive
+.env
+
+# OpenCode
+.opencode/memory/
+
+# OS
+.DS_Store
+Thumbs.db

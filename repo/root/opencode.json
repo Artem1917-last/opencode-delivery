@@ -1,12 +1,10 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "shell": "cmd",
-  "model": "opencode-go/deepseek-v4-flash",
+
   "permission": {
-    "edit": "ask",
     "bash": "ask",
+    "edit": "ask",
     "webfetch": "ask",
-    "doom_loop": "ask",
     "mcp": "ask",
     "skill": "ask"
   }

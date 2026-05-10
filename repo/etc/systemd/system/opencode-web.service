@@ -1,0 +1,21 @@
+[Unit]
+Description=OpenCode Web Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=devuser
+Group=devuser
+WorkingDirectory=/home/devuser
+ExecStart=/usr/local/bin/opencode web --port 4096 --hostname 127.0.0.1
+Restart=always
+RestartSec=10
+
+# Environment
+Environment=HOME=/home/devuser
+Environment=NODE_ENV=production
+EnvironmentFile=/home/devuser/.env
+
+[Install]
+WantedBy=multi-user.target

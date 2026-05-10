@@ -1,0 +1,41 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "server": {
+    "host": "127.0.0.1",
+    "port": 4096,
+    "auth": {
+      "username": "${OPENCODE_SERVER_USERNAME:-admin}",
+      "password": "${OPENCODE_SERVER_PASSWORD:-admin}"
+    }
+  },
+
+  "permission": {
+    "bash": "ask",
+    "edit": "ask",
+    "webfetch": "ask",
+    "skill": "ask",
+    "mcp": "ask"
+  },
+
+  "mcp": {
+    "filesystem": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/home/devuser"]
+    },
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-playwright"]
+    },
+    "google-workspace": {
+      "type": "local",
+      "command": ["python3", "-m", "google_workspace_mcp"],
+      "enabled": false
+    },
+    "telegram": {
+      "type": "local",
+      "command": ["python3", "-m", "telegram_mcp"],
+      "enabled": false
+    }
+  }
+}

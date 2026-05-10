@@ -6,6 +6,17 @@ output-*/
 manifest.json
 serial.log
 packer-debug.log
+repo.tar.gz
+
+# Packer binary artifacts (large files, not for git)
+packer/files/*.iso
+packer/files/*.tar.gz
+packer/files/*.tar.xz
+packer/files/initrd.gz
+packer/files/vmlinuz
+
+# Build artifacts
+configs.tar.gz
 
 # OpenCode local
 .opencode/

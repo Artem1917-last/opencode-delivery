@@ -1,0 +1,30 @@
+# Traefik TLS configuration
+# Let's Encrypt automatic certificate management
+
+# ===========================================
+# Certificate Resolver
+# ===========================================
+tls:
+  # Note: Certificate files are managed by Let's Encrypt automatically
+  # These placeholder paths are required by Traefik config structure
+  # but actual certs are stored in /etc/traefik/acme/acme.json
+
+  # ===========================================
+  # Let's Encrypt Configuration
+  # ===========================================
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/traefik/certs/placeholder.pem
+        keyFile: /etc/traefik/certs/placeholder.key
+
+  # ===========================================
+  # Challenge settings (HTTP-01)
+  # ===========================================
+  certResolvers:
+    letsencrypt:
+      acme:
+        email: "${LETSENCRYPT_EMAIL:-admin@example.com}"
+        storage: /etc/traefik/acme/acme.json
+        httpChallenge:
+          entryPoint: web

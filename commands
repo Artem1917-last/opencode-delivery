@@ -1,7 +1,33 @@
-# Запуск сборки Packer (WSL2 + QEMU)
-wsl -d Debian -- bash -c "cd /mnt/c/Users/Артем/opencode-delivery && PACKER_LOG=1 PACKER_LOG_FILE=packer-debug.log packer build -on-error=ask packer/template.pkr.hcl"
+# Архивирует папку repo/ в repo.tar.gz — чтобы Packer мог отдать его VM через HTTP. 
+.\scripts\packer\package-repo.bat
 
-# Коммит и push (замени MESSAGE на своё)
+
+# Запуск сборки Packer (WSL2 + QEMU)
+$env:PACKER_LOG=1; $env:PATH = "C:\Program Files\qemu;" + $env:PATH; .\packer.exe build -on-error=ask packer\template.pkr.hcl 2>&1 | Tee-Object -FilePath "C:\opencode-delivery\packer-log.txt"
+
+
 git add .; git commit -m "MESSAGE"; git push
 
-# Тест permissions — v3
+
+Команда должна быть:
+export SSH_PUBLIC_KEY="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCmyMYF78cI1JDcrE/jFbHY67fpo0ARt7OQ+kORdtKJB9kfnu2vmbLK+A0japwaahyoKgAaIru1nzDD/LHEl1HWTH+2N/IyXX5WkdvDR85UC8irXEoN40D8ffWCZtgW1glxpyberDj2OgHnRcvks8czJIbSzbiHXRB/8XajslolgXHrSyax5ALoJnZKHRNtF7+BFAdoKULOzpktMdbv3BbFeUhgPrTzRHbnggUX4Dxw9L9SGBuMZJKf1ON40eTWFAEAj030r3H02hzBm/fIhn0sqQwEEPqkAbuA2v+hJaa/O+9AtUm8W+dm5Tyc+96ADWzHk85cMvvMREo4gzQNqZDVI5MUEqAg/CZMtTSmUcysECScrNehw8Mctt4hCixU1o/nH/WsF0SxFUerwnnMUKzvVF1BRopzwJkqtOYEkFz2+8JGx8FqYYYdPOz1SeGDIA2l7NFleZcmdewSiVwexUiO1hNSyYZXXpqEh+nzmd+5X/GbGs8FNiRp73klST5QRcI7osRgB0JWnFjGVxrQAJEFiMmmAwFGm0yG1XzLH4Z+6VI7xL028NwK6o2MjH94dT9XdFjov4k009TlJDq2xDFefFpRn26qkUZ4deBFmTETELhjxiKn8wrCVFdsFdef5AXE/y/8QkicHx/l7IDdQwiMHKsSYgz+I/HL+7VoN3ILkQ=="
+export DOMAIN=my-opencode.online LETSENCRYPT_EMAIL=admin@my-opencode.online
+curl -sL https://github.com/Artem1917-last/opencode-delivery/releases/download/v1.0/install.sh | bash
+
+Команда сброса кэша:
+ssh-keygen -R 157.22.198.202
+
+ id_rsa
+
+
+ Пошаговая инструкция (1 минута):
+1. Откройте PuTTY (поиск Windows → PuTTY)
+2. В открывшемся окне:
+   - Host Name: 157.22.198.202
+   - Port: 22
+   - Connection type: SSH (уже выбрано)
+3. Слева дерево: нажмите + рядом с SSH → Auth → Credentials
+4. Справа кнопка Browse... → найдите и выберите ваш тестовый ключ.ppk
+5. Слева: нажмите Session (самый верх)
+6. В поле Saved Sessions: введите my-opencode → кнопка Save
+7. Кнопка Open → появится серое окно → нажмите Accept (один раз) → и вы на сервере
